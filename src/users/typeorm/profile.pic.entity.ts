@@ -6,7 +6,7 @@ export class ProfilePic {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column('text', { array: true, nullable: true })
   image: string[];
 
   @Column()

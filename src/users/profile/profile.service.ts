@@ -6,6 +6,8 @@ import { CreateUserProfile } from '../dtos/createProfile.dto';
 import { User } from '../typeorm/user';
 import { ProfilePic } from '../typeorm/profile.pic.entity';
 import { CreateProfilePicDto } from '../dtos/createProfilePic.dto';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
 
 @Injectable()
 export class ProfileService {
@@ -14,7 +16,13 @@ export class ProfileService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(ProfilePic)
     private imageRepository: Repository<ProfilePic>,
-  ) {}
+  ) {
+    cloudinary.config({
+      cloud_name: '',
+      api_key: '',
+      api_secret: '',
+    });
+  }
 
   async createProfile(
     userId: number,
@@ -41,10 +49,16 @@ export class ProfileService {
       await this.profileRepository.save(profile);
     }
 
-    if (!profileData.image) throw new Error('Image is required');
+    if (!profileData) {
+      throw new Error('Profile data not provided');
+    }
+
+    const image = Array.isArray(profileData.image)
+      ? profileData.image
+      : [profileData.image ?? ''];
 
     const profilePic = this.imageRepository.create({
-      image: profileData.image,
+      image: image,
       createdAt: new Date(),
       profile,
     });
@@ -52,5 +66,23 @@ export class ProfileService {
     await this.imageRepository.save(profilePic);
 
     return { message: 'user profile created successfully' };
+  }
+
+  uploadToCloudinary(buffer: Buffer): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const file = cloudinary.uploader.upload_stream(
+        {
+          upload_preset: 'fb_profile',
+        },
+        (error, result) => {
+          if (error) {
+            reject(new Error('Profile upload failed'));
+          } else {
+            resolve(result.secure_url);
+          }
+        },
+      );
+      Readable.from(buffer).pipe(file);
+    });
   }
 }
