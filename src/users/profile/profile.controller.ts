@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { CreateUserProfile } from '../dtos/createProfile.dto';
-import { CreateProfilePicDto } from '../dtos/createProfilePic.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('profile')
@@ -17,23 +16,20 @@ export class ProfileController {
   constructor(private profileService: ProfileService) {}
 
   @Post(':userId')
-  @UseInterceptors(FileInterceptor('profile'))
+  @UseInterceptors(FileInterceptor('image'))
   async creatProfile(
     @Param('userId', ParseIntPipe) userId: number,
     @UploadedFile() file: Express.Multer.File,
     @Body()
     body: {
       userProfile: CreateUserProfile;
-      profileData: CreateProfilePicDto;
     },
   ) {
+    const profileData: any = {};
     if (file) {
       try {
         const url = await this.profileService.uploadToCloudinary(file.buffer);
-        if (!body.profileData) {
-          body.profileData.image = '';
-        }
-        body.profileData.image = url;
+        profileData.image = url;
       } catch (error) {
         throw new Error(`Profile upload failed, ${error}`);
       }
@@ -41,7 +37,7 @@ export class ProfileController {
     return this.profileService.createProfile(
       userId,
       body.userProfile,
-      body.profileData,
+      profileData,
     );
   }
 }

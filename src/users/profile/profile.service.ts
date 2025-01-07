@@ -8,6 +8,7 @@ import { ProfilePic } from '../typeorm/profile.pic.entity';
 import { CreateProfilePicDto } from '../dtos/createProfilePic.dto';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ProfileService {
@@ -16,11 +17,12 @@ export class ProfileService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(ProfilePic)
     private imageRepository: Repository<ProfilePic>,
+    private configService: ConfigService,
   ) {
     cloudinary.config({
-      cloud_name: '',
-      api_key: '',
-      api_secret: '',
+      cloud_name: configService.get<string>('CLOUD_NAME'),
+      api_key: configService.get<string>('API_KEY'),
+      api_secret: configService.get<string>('API_SECRET'),
     });
   }
 
@@ -72,11 +74,13 @@ export class ProfileService {
     return new Promise((resolve, reject) => {
       const file = cloudinary.uploader.upload_stream(
         {
-          upload_preset: 'fb_profile',
+          upload_preset: 'nestjs-demo',
         },
         (error, result) => {
           if (error) {
-            reject(new Error('Profile upload failed'));
+            reject(
+              new Error(`Profile upload failed, ${error.message || error}`),
+            );
           } else {
             resolve(result.secure_url);
           }
